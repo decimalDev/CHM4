@@ -16,19 +16,19 @@ int main()
     
     cout.precision(7);
     cout.fixed;
-    /*
+    
     vector<vector<double>> I = { {0, 0.5}, {3.85, 4.0}, {4.5, 4.95} };
     double pi = 2 * acos(0.0);
     double eps = pow(10.0, -6.0);
 
     //TASK I
-    /*vector<double> X;
+    vector<double> X;
     Dichotomia_adhoc(X, I, eps);
     Chordae_adhoc(X, I, eps);
     Iterationes(I, eps);
     Newton(I, eps);
     Secantes(I, eps);
-
+    /*
     //TASK II
     SystemIter(3.5, 2.2, test_x, test_y, 0.001); //вроде работает!
     vector<double> R = SystemIter(0.25, sqrt(2) * 0.25 * 0.25, F_x, F_y, pow(10, -5));

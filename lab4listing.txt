@@ -1,0 +1,1008 @@
+lab4.h:
+// lab4.h : включаемый файл для стандартных системных включаемых файлов
+// или включаемые файлы для конкретного проекта.
+
+#pragma once
+
+#include <iostream>
+
+// TODO: установите здесь ссылки на дополнительные заголовки, требующиеся для программы.
+
+
+
+
+lab4.cpp:
+#include<iostream>
+#include <fstream>
+#include<vector>
+#include<stdio.h>
+#include<cmath>
+#include <iomanip>
+#include "Matrix algebra.h"
+#include "Task I.h"
+#include "Task II.h"
+#include "Task III.h"
+
+using namespace std;
+
+int main()
+{
+    
+    cout.precision(7);
+    cout.fixed;
+    
+    vector<vector<double>> I = { {0, 0.5}, {3.85, 4.0}, {4.5, 4.95} };
+    double pi = 2 * acos(0.0);
+    double eps = pow(10.0, -6.0);
+
+    //TASK I
+    /*
+    vector<double> X;
+    Dichotomia_adhoc(X, I, eps);
+    Chordae_adhoc(X, I, eps);
+    Iterationes(I, eps);
+    Newton(I, eps);
+    Secantes(I, eps);
+    */
+    /*
+    //TASK II
+    SystemIter(3.5, 2.2, test_x, test_y, 0.001); //вроде работает!
+    vector<double> R = SystemIter(0.25, sqrt(2) * 0.25 * 0.25, F_x, F_y, pow(10, -5));
+    //тут я проверяю, действительно ли мы близко подошли к максимуму
+    //double x = R[0];
+    //double y = R[1];
+    //cout << sin(x * y) + y * y + pow(x, 4);
+    */
+    //TASK III
+    SysNewton(ftest, gtest, dFdx, dFdy, dGdx, dGdy, 0.0, -2.0, 0.001); //ВРОДЕ РАБОТАЕТ
+    //удивительное дело: метод Ньютона позволяет решить пункт (2.2) безо всяких ухищрений, напрямую из необходимого условия экстремума!
+    SysNewton(fsysnewton, gsysnewton, dFSNdx, dFSNdy, dGSNdx, dGSNdy, -0.25, 0.25, pow(10, -5));
+
+    SysNewton(fsysnewton, gsysnewton, Numerical_dFdx, Numerical_dFdy, Numerical_dGdx, Numerical_dGdy, -0.25, 0.25, pow(10, -5));
+    return 0;
+}
+
+
+
+
+
+Matrix algebra.h:
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+#pragma once
+
+class Vector;
+
+// класс ћј“–»÷ј характеризуетс¤ трем¤ пол¤ми: числом строк (rows), числом столбцов (columns) и двумерным массивом элементов (content)
+class Matrix
+{
+protected:
+	int rows;
+	int columns;
+	vector<vector<double>> content;
+
+public:
+	int getrows();
+
+	int getcolumns();
+
+	void setcontent(int m, int n); // по дефолту content -- нулева¤ матрица соответствующего размера
+
+	//метод, позвол¤ющий заполнить выбранную ¤чейку нужным числом
+	void setelement(int i, int j, double a);
+
+	//метод, извлекающий значение из нужной ¤чейки
+	double getelement(int i, int j);
+
+	//метод, осуществл¤ющий перестановку строк
+	void permutation(int i, int j);
+
+	//метод, осуществл¤ющий умножение стоки на скал¤р
+	void scalar(int i, double a);
+
+	//метод, вычитающий помноженную на a j-ю строку из i-ой
+	void substract(int i, int j, double a);
+
+	//транспонирование
+	Matrix T();
+
+	//дефолтный конструктор строит матрицу 3x3
+	Matrix();
+
+	Matrix(int m, int n);
+
+	Matrix(int m, int n, double k); //строит матрицу m x n с константой k на главной диагонали
+
+	Matrix(vector<vector<double>>& C);
+
+	void print();
+
+	friend Matrix operator* (const Matrix& A, const Matrix& B);
+
+	friend Vector operator* (const Matrix& A, const Vector& X);
+
+};
+
+class Vector : public Matrix
+{
+public:
+	void setelement(int i, double a);
+
+	double getelement(int i);
+
+	Vector();
+
+	Vector(int m);
+
+	Vector(vector<double>& C);
+
+	//friend Vector operator* (const RotationMatrix& A, const Vector& X);
+
+	Vector& operator= (const Vector& v);
+
+	friend Vector operator* (const Matrix& A, const Vector& X);
+
+};
+
+
+
+Matrix algebra.cpp:
+#include "Matrix algebra.h"
+
+// класс ћј“–»÷ј характеризуетс¤ трем¤ пол¤ми: числом строк (rows), числом столбцов (columns) и двумерным массивом элементов (content)
+
+int Matrix::getrows()
+{
+	return rows;
+}
+
+int Matrix::getcolumns()
+{
+	return columns;
+}
+
+void Matrix::setcontent(int m, int n) // по дефолту content -- нулева¤ матрица соответствующего размера
+{
+	rows = m;
+	columns = n;
+	vector<vector<double>> Theta;
+	Theta.resize(m);
+	for (int i = 0; i < m; i++)
+	{
+		Theta[i].resize(n);
+		fill(Theta[i].begin(), Theta[i].end(), 0.0);
+	}
+	content = Theta;
+}
+
+//метод, позвол¤ющий заполнить выбранную ¤чейку нужным числом
+void Matrix::setelement(int i, int j, double a)
+{
+	if (i < 1 || j < 1 || i > rows || j > columns)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		content[i-1][j-1] = a;
+	}
+}
+
+//метод, извлекающий значение из нужной ¤чейки
+double Matrix::getelement(int i, int j)
+{
+	if (i < 1 || j < 1 || i > rows || j > columns)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		return content[i-1][j-1];
+	}
+}
+
+//дефолтный конструктор строит матрицу 3x3
+Matrix::Matrix()
+{
+	rows = 3;
+	columns = 3;
+	setcontent(3,3);
+}
+	
+//конструктор, стро¤щий нулевую матрицу m x n
+Matrix::Matrix(int m, int n)
+{
+	rows = m;
+	columns = n;
+	setcontent(m, n);
+}
+
+Matrix::Matrix(int m, int n, double k)
+{
+	rows = m;
+	columns = n;
+	vector<vector<double>> E;
+	E.resize(m);
+	for (int i = 0; i < m; i++)
+	{
+		E[i].resize(n);
+		fill(E[i].begin(), E[i].end(), 0.0);
+		if (i < n)
+		{
+			E[i][i] = k;
+		}
+	}
+	content = E;
+}
+
+//конструктор, стро¤щий матрицу m x n и заполн¤ющий еЄ элементами данного массива C
+Matrix::Matrix(vector<vector<double>>& C)
+{
+	int m = C.size();
+	int n = C[0].size();
+	setcontent(m, n);
+	for (int i = 0; i < m; i++)
+	{
+		for (int j = 0; j < n; j++)
+		{
+			content[i][j] = C[i][j];
+		}
+	}
+	cout << "Matrix created!" << endl;
+}
+
+//ѕоложить элемент в вектор
+void Vector::setelement(int i, double a)
+{
+	if (i < 1 || i > rows)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		content[i-1][0] = a;
+	}
+}
+
+//получить элемент вектора
+double Vector::getelement(int i)
+{
+	if (i < 1 || i > rows)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		return content[i-1][0];
+	}
+}
+
+//дефолтный конструктор вектора -- нулева¤ матрица 3 x 1
+Vector::Vector()
+{
+	rows = 3;
+	columns = 1;
+	setcontent(3, 1);
+}
+
+//нулевой вектор на m строках
+Vector::Vector(int m)
+{
+	rows = m;
+	columns = 1;
+	setcontent(m, 1);
+}
+
+//вектор размера m, заполненный элементами массива C
+Vector::Vector(vector<double>& C)
+{
+	int m = C.size();
+	columns = 1;
+	setcontent(m,1);
+	for (int i = 0; i < m; i++)
+	{
+		content.at(i).at(0) = C.at(i);
+	}
+}
+
+//оператор присваивани¤ дл¤ векторов
+Vector& Vector::operator= (const Vector& v)
+{
+	if (rows != v.rows)
+	{
+		throw "Error.";
+	}
+	for (int i = 0; i < v.rows; i++)
+	{
+		content[i-1].at(0) = v.content[i-1].at(0);
+	}
+	return *this;
+}
+
+void Matrix::permutation(int i, int j)
+{
+	if (i < 1 || i > rows || j  < 1 || j > rows)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		vector <double> buf = content[i - 1];
+		content[i - 1] = content[j - 1];
+		content[j - 1] = buf;
+	}
+}
+
+void Matrix::scalar(int i, double a)
+{
+	if (i < 1 || i > rows)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		for (int j = 1; j <= columns; j++) content[i - 1][j - 1] = content[i - 1][j - 1] * a;
+	}
+}
+
+void Matrix::substract(int i, int j, double a)
+{
+	if (i < 1 || i > rows || j < 1 || j > rows)
+	{
+		throw "\n INCORRECT INPUT FOR MATRIX CELL. \n";
+	}
+	else
+	{
+		for (int k = 1; k <= columns; k++)
+			content[i - 1][k - 1] = content[i - 1][k - 1] - a * content[j - 1][k - 1];
+	}
+}
+
+void Matrix::print()
+{
+	for (int i = 1; i <= rows; i++)
+	{
+		for (int j = 1; j < columns; j++) cout << this->getelement(i, j) << " ";
+		cout << this->getelement(i, columns) << endl;
+	}
+}
+
+Matrix operator* (const Matrix& A, const Matrix& B)
+{
+	if (A.columns != B.rows)
+	{
+		throw "\n GIVEN MATRICES ARE NOT MULTIPLIABLE.\n";
+	}
+	int m = A.rows;
+	int n = A.columns;
+	int p = B.columns;
+	Matrix C(m, p);
+	for (int i = 0; i < m; i++)
+	{
+		for (int j = 0; j < p; j++)
+		{
+			float z = 0;
+			for (int k = 0; k < n; k++)
+			{
+				float x = A.content[i][k];
+				float y = B.content[k][j];
+				z += (x * y);
+			}
+			C.content[i][j] = z;
+		}
+	}
+	return C;
+}
+
+Vector operator* (const Matrix& A, const Vector& X)
+{
+	if (A.columns != X.rows)
+	{
+		throw "\n GIVEN MATRICES ARE NOT MULTIPLIABLE.\n";
+	}
+	int m = A.rows;
+	int n = A.columns;
+	Vector Y(m);
+	for (int i = 0; i < m; i++)
+	{
+		float b = 0;
+		for (int k = 0; k < n; k++)
+		{
+			float a = A.content[i][k];
+			float x = X.content[0][k];
+			b += (a * x);
+		}
+		Y.content[0][i] = b;
+	}
+	return Y;
+}
+
+Matrix Matrix::T()
+{
+	Matrix T(columns, rows);
+	for (int i = 1; i <= rows; i++)
+	{
+		for (int j = 1; j <= columns; j++)
+		{
+			T.setelement(j, i, this->content[i - 1][j - 1]);
+		}
+	}
+	return T;
+}
+
+
+Task I.h:
+#include<iostream>
+#include <fstream>
+#include<vector>
+#include<stdio.h>
+#include<cmath>
+#include <iomanip>
+#include "Matrix algebra.h"
+
+using namespace std;
+
+double f(double x);
+
+double phi(double x);
+
+double fi(double x);
+
+double varphi(double x);
+
+double fnewton(double x);
+
+void Dichotomia(vector<double>& X, double a, double b, double eps,int &iteration);
+
+void Dichotomia_adhoc(vector<double>& X, vector<vector<double>>& I, double eps);
+
+void Chordae(vector<double>& X, double a, double b, double eps, int i, int &iteration);
+
+void Chordae_adhoc(vector<double>& X, vector<vector<double>>& I, double eps);
+
+vector<double> Iterationes(vector<vector<double>>& I, double eps);
+
+vector<double> Newton(vector<vector<double>>& I, double eps);
+
+vector<double> Secantes(vector<vector<double>>& I, double eps);
+
+
+
+
+
+
+
+Task I.cpp:
+#include "Task I.h"
+
+//из графических соображений: всего 3 корня, первый лежит в отрезке [0;0.5], второй -- на отрезке [3.5;4.5], третий -- на отрезке [4.5;5]. Положим эти точки в вектор vector<vector<double>> Starts
+
+double f(double x)
+{
+	return(x + 4 * sin(x) - 1);
+}
+
+double phi(double x) //для построения метода простых итераций для первого корня воспользуемся представлением x = arcsin([1-x]/4); производная функции в правой части имеет модуль меньше 1 на большом интервале, включающем первый и второй корни уравнения, но при выбранных нами приближениях соответствующая последовательность сходится именно к первому корню
+{
+	return(asin((1 - x) / 4));
+}
+
+double fi(double x) //для построения метода простых итераций для второго корня воспользуемся представлением x = x + f(x) -- производная правой части имеет модуль меньше 1 в небольшой окрестности второго корня
+{
+	return(2 * x + 4 * sin(x) - 1);
+}
+
+double varphi(double x) //третий корень будем искать как x = 1 - 4sin(x), модуль функции в правой части меньше единицы поблизости лишь третьего из корней
+{
+	return(1 - 4 * sin(x));
+}
+
+double fnewton(double x)
+{
+	return((x + 4 * sin(x) - 1) / (1 + 4 * cos(x)));
+}
+
+void Dichotomia(vector<double>& X, double a, double b, double eps,int &iteration) //примитивная реализация метода дихотомии -- ищет корни только на тех отрезках, на концах которых функция принимает различные значения; если при делениях корень лежит в отрезке, на концах которого функция принимает одинаковое значение, то он не будет найден
+{
+	iteration++;
+	double x = (a + b) / 2;
+	if (b - a <= 2*eps || f(x) == 0)
+	{
+		X.push_back(x);
+	}
+	if(b - a > 2 * eps)
+	{
+		if (f(a) * f(x) <= 0)
+		{
+			Dichotomia(X, a, x, eps,iteration);
+		}
+		if (f(x) * f(b) <= 0)
+		{
+			Dichotomia(X, x, b, eps, iteration);
+		}
+	}
+}
+
+void Dichotomia_adhoc(vector<double>& X, vector<vector<double>>& I, double eps) //I -- множество отрезков (каждый представлен парой своих границ), на которых функция имеет единственный нуль
+{
+	int iteration = 0;
+	
+	for (vector<double> i : I)
+	{
+		double a = i[0];
+		double b = i[1];
+		Dichotomia(X, a, b, eps, iteration);
+	}
+	sort(X.begin(), X.end());
+	cout << "By the dichotomia method " << X.size() << " roots were found: ";
+	for (double x : X) cout << x << " ";
+	cout << endl;
+
+	cout <<" Dichotomia_adhoc number of iteration " << iteration << endl;
+}
+
+void Chordae(vector<double>& X, double a, double b, double eps, int i,int &iteration) //i = 1, если фиксируем левые концы хорд; 2, если правые
+{
+	iteration++;
+	double c, fc, t, x, buf; //t -- предыдущая точка, x -- текущая
+	if (i == 1)
+	{
+		t = a;
+		c = b;
+		fc = f(b);
+	}
+	else
+	{
+		t = b;
+		c = a;
+		fc = f(a);
+	}
+	int iterations = 0;
+	do
+	{
+		iterations++;
+		x = t - (t - c) * f(t) / (f(t) - fc);
+		buf = t;
+		t = x;
+	} while (abs(buf - x) > eps);
+	X.push_back(x);
+	//cout << "Chordae number of iteration " << iterations << endl;
+}
+
+void Chordae_adhoc(vector<double>& X, vector<vector<double>>& I, double eps)
+{
+	int iterations = 0;
+	X = {};
+	cout << "To find the roots using the chordae method, choose which ends are to be fixed: press 1 for left ones, 2 for right ones." << endl;
+	int Flag;
+	cin >> Flag;
+	for(vector<double> i: I)
+	{
+		double a = i[0];
+		double b = i[1];
+		Chordae(X, a, b, eps, Flag, iterations);
+	}
+	sort(X.begin(), X.end());
+	cout << "By the chordae method " << X.size() << " roots were found: ";
+	for (double x : X) cout << x << " ";
+	cout << endl;
+	cout << "Chordae number of iteration " << iterations << endl;
+}
+
+vector<double> Iterationes(vector<vector<double>>& I, double eps)
+{
+	int iterations = 0;
+	vector<double> X;
+	for (int i = 0; i < 3; i++)
+	{
+		double a = I[i].at(0);
+		double b = I[i].at(1);
+		double xold = (a + b) / 2;
+		double xnew, buf;
+		do
+		{
+			iterations++;
+			if (i == 0) xnew = phi(xold);
+			if (i == 1) xnew = fi(xold);
+			if (i == 2) xnew = varphi(xold);
+			buf = xold;
+			xold = xnew;
+		} while (abs(xnew - buf) > eps);
+		X.push_back(xnew);
+	}
+	cout << "Roots found by the simple iterations method: ";
+	for (double x : X) cout << x << " ";
+	cout << endl;
+	cout << "Iterationes number of iteration " << iterations << endl;
+	return X;
+}
+
+vector<double> Newton(vector<vector<double>>& I, double eps)
+{
+	int iterations = 0;
+	vector<double> X;
+	for (int i = 0; i < 3; i++)
+	{
+		iterations++;
+		double a = I[i].at(0);
+		double b = I[i].at(1);
+		double xold = (a + b) / 2;
+		double xnew, buf;
+		do
+		{
+			xnew = xold - fnewton(xold);
+			buf = xold;
+			xold = xnew;
+		} while (abs(xnew - buf) > eps);
+		X.push_back(xnew);
+	}
+	cout << "Roots found by the Newton method: ";
+	for (double x : X) cout << x << " ";
+	cout << endl;
+	cout << "Newton number of iteration " << iterations << endl;
+	return X;
+}
+
+vector<double> Secantes(vector<vector<double>>& I, double eps)
+{
+	int iterations = 0;
+	vector<double> X;
+	for (int i = 0; i < 3; i++)
+	{
+		double a = I[i].at(0);
+		double b = I[i].at(1);
+		double x_penult = b;
+		double x_ult = (a + b) / 2;
+		double xnew, buf;
+		do
+		{
+			iterations++;
+			xnew = x_ult - (x_ult - x_penult)*f(x_ult)/(f(x_ult)-f(x_penult));
+			x_penult = x_ult;
+			buf = x_ult;
+			x_ult = xnew;
+		} while (abs(xnew - buf) > eps);
+		X.push_back(xnew);
+	}
+	cout << "Roots found by the secants method: ";
+	for (double x : X) cout << x << " ";
+	cout << endl;
+	cout << "Secantes number of iteration " << iterations << endl;
+	return X;
+}
+
+
+
+
+Task II.h:
+#include<iostream>
+#include <fstream>
+#include<vector>
+#include<stdio.h>
+#include<cmath>
+#include <iomanip>
+#include "Matrix algebra.h"
+
+using namespace std;
+
+vector<double> SystemIter(double x0, double y0, double (*phi_x)(double, double), double (*phi_y)(double, double), double eps);
+
+double test_x(double x, double y);
+
+double test_y(double x, double y);
+
+double F_x(double x, double y);
+
+double F_y(double x, double y);
+
+
+
+
+
+
+Task II.cpp:
+#include "Task II.h"
+
+vector<double> SystemIter(double x0, double y0, double (*phi_x)(double, double), double (*phi_y)(double, double), double eps)
+{
+	double xold = x0;
+	double yold = y0;
+	double xnew, ynew, xbuf, ybuf;
+	do
+	{
+		xnew = phi_x(xold, yold);
+		ynew = phi_y(xold, yold);
+		xbuf = xold;
+		ybuf = yold;
+		xold = xnew;
+		yold = ynew;
+	} while (sqrt((xnew-xbuf)*(xnew - xbuf) + (ynew-ybuf)* (ynew - ybuf)) > eps);
+	cout << "The root of this system equals (" << xnew << "; " << ynew << ")^T." << endl;
+	vector<double> r = { xnew, ynew };
+	return(r);
+}
+
+double test_x(double x, double y)
+{
+	return(sqrt((x*(y+5)-1)/2));
+}
+
+double test_y(double x, double y)
+{
+	return(sqrt(x + 3*log(x)));
+}
+
+//ПОИСК МИНИМУМА: наша функция имеет вид F(x,y) = sin(xy) + y^2 + x^4
+//необходимое условие эстремума dF/dx = 0 = dF/dy принимает вид
+//ycos(xy) + 4x^3 = 0,
+//xcos(x,y) + 2y = 0
+//Из этой системы нужно получить некоторое УДАЧНОЕ представление вида
+//x = phi_1 (x,y),
+//y = phi_2 (x,y)
+//Далеко не всякое такое представление нам подойдёт: чтобы итерация сходилась к искомому корню, частные производные функций phi_1 и phi_2 должны удовлетворять условиям, которых не так-то просто добиться
+//Пришлось перебрать много вариантов, но в итоге сработал следующий: полагая, что x != 0 и y != 0 (это позволяет чертёж), в обоих уравнениях выразим cos(xy):
+//cos(xy) = -4x^3/y
+//cos(xy) = -2y/x
+//Приравнивая левые части, получаем
+//y^2 = 2x^4
+//Предположим, что мы работаем в полуплоскости y > 0 (из графических соображений мы ищем два симметричных минимума, один из которых лежит в нужной полуплоскости), тогда
+//y = sqrt(2) * x^2
+//Функция phi_2 получена. Чтобы получить phi_1, подставим полученное выражение для y в первое исходное условие, сократим равенство на x^2 и получим
+//x = -sqrt(2) cos(sqrt(2)*x^3)/4
+//Это phi_1. Полученная пара функций даёт хорошее приближение (проверил графически). При x = 0.25 нужные достаточные условия сходимости очевидно соблюдаются (график), поэтому в качестве начальной точки положим x = 0.25, y = sqrt(2)*0.25*0.25
+
+double F_x(double x, double y)
+{
+	//return(-pow(y * cos(x * y) / 4, 1 / 3));
+	return(-sqrt(2)*cos(sqrt(2)*pow(x,3))/4);
+}
+
+double F_y(double x, double y)
+{
+	return(sqrt(2)*x*x);
+}
+
+
+
+
+Task III.h:
+#include<iostream>
+#include <fstream>
+#include<vector>
+#include<stdio.h>
+#include<cmath>
+#include <iomanip>
+#include "Matrix algebra.h"
+
+using namespace std;
+
+double det(Matrix& A);
+
+vector<double> SysNewton(double(*f)(double, double), double(*g)(double,double), double (*dFdx)(double, double), double (*dFdy)(double, double), double (*dGdx)(double, double), double (*dGdy)(double, double), double x0, double y0, double eps);
+
+double ftest(double x, double y);
+
+double gtest(double x, double y);
+
+double dFdx(double x, double y);
+
+double dFdy(double x, double y);
+
+double dGdx(double x, double y);
+
+double dGdy(double x, double y);
+
+double fsysnewton(double x, double y);
+
+double gsysnewton(double x, double y);
+
+double dFSNdx(double x, double y);
+
+double dGSNdx(double x, double y);
+
+double dFSNdy(double x, double y);
+
+double dGSNdy(double x, double y);
+
+double Numerical_dFdx(double x, double y);
+
+double Numerical_dFdy(double x, double y);
+
+double Numerical_dGdx(double x, double y);
+
+double Numerical_dGdy(double x, double y);
+
+
+
+
+
+
+Task III.cpp:
+#include "Task III.h"
+#define DELTA 0.000001
+
+double det(Matrix& A) //чтобы считать определитель
+{
+	return(A.getelement(1, 1) * A.getelement(2, 2) - A.getelement(1, 2) * A.getelement(2, 1));
+}
+
+vector<double> SysNewton(double(*f)(double, double), double(*g)(double, double), double(*dFdx)(double, double), double(*dFdy)(double, double), double(*dGdx)(double, double), double(*dGdy)(double, double), double x0, double y0, double eps) //метод Ньютона для точных производных (вектор Delta находим методом Крамера)
+{
+	vector<vector<double>> W = { {dFdx(x0, y0), dFdy(x0,y0)}, {dGdx(x0, y0), dGdy(x0,y0)} };//по крамеру и по Ньютону-Рафсону
+	Matrix M(W);
+	vector<double> y = { f(x0, y0), g(x0, y0) };
+	Vector Y(y);
+	double xold = x0;
+	double yold = y0;
+	Vector Delta(2);
+	double xnew, xbuf, ynew, ybuf;
+	do
+	{
+		double d = det(M);
+		//cout << "det = " << d << endl;
+		//cout << M.getelement(1, 1) <<"*" << M.getelement(2, 2) << " - " << M.getelement(1, 2) <<"*"<< M.getelement(2, 1) << endl;
+		double xi = -Y.getelement(1) * M.getelement(2, 2) + Y.getelement(2) * M.getelement(1, 2);
+		double eta = -Y.getelement(2) * M.getelement(1, 1) + Y.getelement(2) * M.getelement(2, 1);
+		Delta.setelement(1, xi / d);
+		Delta.setelement(2, eta / d);
+		xnew = xold + Delta.getelement(1);
+		ynew = yold + Delta.getelement(2);
+		xbuf = xold;
+		ybuf = yold;
+		xold = xnew;
+		yold = ynew;
+		M.setelement(1, 1, dFdx(xnew, ynew));
+		M.setelement(1, 2, dFdy(xnew, ynew));
+		M.setelement(2, 1, dGdx(xnew, ynew));
+		M.setelement(2, 2, dGdy(xnew, ynew));
+		Y.setelement(1, f(xnew, ynew));
+		Y.setelement(2, g(xnew, ynew));
+		cout << xnew << " and " << ynew << endl;
+	} while (sqrt((xnew - xbuf) * (xnew - xbuf) + (ynew - ybuf) * (ynew - ybuf)) > eps);
+	cout << "The root found by the Newton method: (" << xnew << "; " << ynew << ")^T." << endl;
+	vector<double> R = { xnew, ynew };
+
+	return R;
+}
+
+double ftest(double x, double y)
+{
+	return(sin(x - 0.6) - y - 1.6);
+}
+
+double gtest(double x, double y)
+{
+	return(3 * x - cos(y) - 0.9);
+}
+
+double dFdx(double x, double y)
+{
+	return(cos(x - 0.6));
+}
+
+double dFdy(double x, double y)
+{
+	return(-1);
+}
+
+double dGdx(double x, double y)
+{
+	return(3);
+}
+
+double dGdy(double x, double y)
+{
+	return(sin(y));
+}
+
+double fsysnewton(double x, double y)
+{
+	//return(x + sqrt(2) * cos(sqrt(2) * pow(x, 3) / 4));
+	return(y * cos(x * y) + 4 * x * x * x);
+}
+
+double gsysnewton(double x, double y)
+{
+	//return(y - sqrt(2) * x * x);
+	return(x * cos(x * y) + 2 * y);
+}
+
+double dFSNdx(double x, double y)
+{
+	//return(1 - (3.0 / 2.0)*x*x*sin(sqrt(2)*x*x*x/4));
+	return(12 * x * x - y * y * sin(x * y));
+}
+
+double dGSNdx(double x, double y)
+{
+	//return(-2 * sqrt(2) * x);
+	return(- x * y * sin(x * y));
+}
+
+double dFSNdy(double x, double y)
+{
+	//return 0;
+	return (cos(x * y) - y * sin(x * y));
+}
+
+double dGSNdy(double x, double y)
+{
+	//return 1;
+	return(2 - x * x * sin(x * y));
+}
+
+double Numerical_dFdx(double x,double y) {
+	double dx = 1;
+	//double dy = 1;
+	double d1fx = fsysnewton(x + dx, y) - fsysnewton(x - dx, y); d1fx /= (2 * dx);
+	dx /= 2;
+	double d2fx = fsysnewton(x + dx, y) - fsysnewton(x - dx, y); d2fx /= (2 * dx);
+	d1fx = abs(d1fx - d2fx);
+	while (d1fx>DELTA) {
+		d1fx = d2fx;
+		dx /= 2;
+		d2fx = fsysnewton(x + dx, y) - fsysnewton(x - dx, y); d2fx /= (2 * dx);
+		d1fx = abs(d1fx - d2fx);
+		//cout << "d2fx = " << d2fx << endl;
+	}
+	return d2fx;
+}
+
+double Numerical_dFdy(double x, double y) {
+	//double dx = 1;
+	double dy = 1;
+	double d1fy = fsysnewton(x , y + dy) - fsysnewton(x, y - dy); d1fy /= (2 * dy);
+	dy /= 2;
+	double d2fy = fsysnewton(x, y + dy) - fsysnewton(x, y - dy); d2fy /= (2 * dy);
+	d1fy = abs(d1fy - d2fy);
+	while (d1fy > DELTA) {
+		d1fy = d2fy;
+		dy /= 2;
+		d2fy = fsysnewton(x, y + dy) - fsysnewton(x, y - dy); d2fy /= (2 * dy);
+		d1fy = abs(d1fy - d2fy);
+		//cout << "d2fy = " << d2fy << endl;
+	}
+	return d2fy;
+}
+
+double Numerical_dGdx(double x, double y) {
+	double dx = 1;
+	//double dy = 1;
+	double d1fx = gsysnewton(x + dx, y) - gsysnewton(x - dx, y); d1fx /= (2 * dx);
+	dx /= 2;
+	double d2fx = gsysnewton(x + dx, y) - gsysnewton(x - dx, y); d2fx /= (2 * dx);
+	d1fx = abs(d1fx - d2fx);
+	while (d1fx > DELTA) {
+		d1fx = d2fx;
+		dx /= 2;
+		d2fx = gsysnewton(x + dx, y) - gsysnewton(x - dx, y); d2fx /= (2 * dx);
+		d1fx = abs(d1fx - d2fx);
+		//cout << "d2gx = " << d2fx << endl;
+	}
+	return d2fx;
+}
+
+double Numerical_dGdy(double x, double y) {
+	//double dx = 1;
+	double dy = 1;
+	double d1fy = gsysnewton(x , y + dy) - gsysnewton(x, y - dy); d1fy /= (2 * dy);
+	dy /= 2;
+	double d2fy = gsysnewton(x, y + dy) - gsysnewton(x, y - dy); d2fy /= (2 * dy);
+	d1fy = abs(d1fy - d2fy);
+	while (d1fy > DELTA) {
+		d1fy = d2fy;
+		dy /= 2;
+		d2fy = gsysnewton(x, y + dy) - gsysnewton(x, y - dy); d2fy /= (2 * dy);
+		d1fy = abs(d1fy - d2fy);
+		//cout << "d2gy = " << d2fy << endl;
+	}
+	return d2fy;
+}
+
